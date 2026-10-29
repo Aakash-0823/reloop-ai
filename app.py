@@ -398,3 +398,100 @@ def home():
                     "to ask before recommending a pathway. Return JSON only with "
                     "keys: device, component, damage, confidence, search_query, "
                     "questions. confidence must be a cautious text label, not a "
+                    "fabricated calibrated probability. questions is an array.",
+                    [
+                        {"type": "input_text", "text":
+                         f"Symptoms: {symptoms}\nModel details: {model or 'Not supplied'}\n"
+                         "Identify what is visible, likely affected component, "
+                         "and what information is missing. Do not invent model numbers."},
+                        {"type": "input_image", "image_url": image_url}
+                    ]
+                )
+
+                questions = inspection.get("questions", [])
+                if questions:
+                    result = {
+                        "device": inspection.get("device", "Uncertain device"),
+                        "damage": inspection.get("damage", "Identity needs clarification."),
+                        "confidence": inspection.get("confidence", "Low"),
+                        "questions": questions,
+                        "repair_cost": "Not estimated",
+                        "replace_cost": "Not estimated"
+                    }
+                else:
+                    query = inspection.get("search_query") or (
+                        f"{model} {inspection.get('component', 'component')} "
+                        "repair replacement price India INR"
+                    )
+                    pages = search_web(query)
+                    sources = []
+                    for p in pages:
+                        url = p.get("url", "")
+                        if url.startswith("https://") or url.startswith("http://"):
+                            sources.append({
+                                "title": p.get("title", "Source page")[:180],
+                                "url": url,
+                                "summary": p.get("content", "Open source for details")[:350]
+                            })
+
+                    evidence = [{
+                        "title": s["title"], "url": s["url"],
+                        "summary": s["summary"]
+                    } for s in sources]
+
+                    decision = ask_ai(
+                        "You are ReLoop AI, an explainable electronics circularity "
+                        "decision assistant. Return JSON only with keys: decision, "
+                        "reason, reasons, comparison, repair_cost, replace_cost. "
+                        "decision must be exactly REPAIR, REPLACE, or RECYCLE. "
+                        "Use source evidence cautiously; search snippets may not "
+                        "contain prices. Never invent a live price. If no verified "
+                        "price appears, say 'Not verified'. Consider affordability, "
+                        "repairability, likely remaining useful life, efficiency, "
+                        "data/security, and environmental impact. Do not claim to "
+                        "measure efficiency unless evidence supports it. Explain "
+                        "uncertainty and recommend professional inspection when needed.",
+                        [{"type": "input_text", "text":
+                          f"Inspection: {json.dumps(inspection)}\n"
+                          f"Symptoms: {symptoms}\nModel: {model or 'Unknown'}\n"
+                          f"User repair budget INR: {budget or 'Not given'}\n"
+                          f"Web search evidence: {json.dumps(evidence)}\n"
+                          "Compare repair versus replacement. Only use RECYCLE "
+                          "when repair/reuse is unsafe, impractical or uneconomic. "
+                          "Do not treat absence of price evidence as a price of zero."}]
+                    )
+                    result = {
+                        "device": inspection.get("device", "Uncertain device"),
+                        "damage": inspection.get("damage", "Needs technician inspection."),
+                        "confidence": inspection.get("confidence", "Uncertain"),
+                        "decision": decision.get("decision", "REPAIR"),
+                        "reason": decision.get("reason", "Review the evidence with a technician."),
+                        "reasons": decision.get("reasons", []),
+                        "comparison": decision.get("comparison", "Price evidence may be incomplete."),
+                        "repair_cost": decision.get("repair_cost", "Not verified"),
+                        "replace_cost": decision.get("replace_cost", "Not verified"),
+                        "sources": sources,
+                        "questions": []
+                    }
+            except requests.HTTPError as exc:
+                status = exc.response.status_code if exc.response is not None else "unknown"
+                result = {"error": f"An API returned HTTP {status}. Check the API key, access and usage limits in your hosting settings."}
+            except requests.RequestException:
+                result = {"error": "A network/API request failed. Check the API keys and try again."}
+            except (ValueError, KeyError, json.JSONDecodeError) as exc:
+                result = {"error": f"Could not complete the analysis: {str(exc)[:220]}"}
+            except Exception:
+                result = {"error": "Unexpected error. Check the server logs for details."}
+
+    return render_template_string(
+        PAGE, result=result, symptoms=symptoms, model=model, budget=budget
+    )
+
+
+@app.errorhandler(413)
+def too_large(_error):
+    return "Image too large. Please upload an image under 8 MB.", 413
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=False)
