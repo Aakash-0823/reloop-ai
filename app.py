@@ -400,6 +400,56 @@ def ask_ai(instructions, content):
 
 
 
+
+def estimate_cost_ranges(model, symptoms):
+    """Return rough India planning ranges; these are not live prices or quotes."""
+    text = f"{model or ''} {symptoms or ''}".lower()
+    if any(k in text for k in ("laptop", "notebook", "dell inspiron", "macbook", "thinkpad")):
+        repair = "₹1,500–₹10,000 (rough estimate)"
+        replacement = "₹25,000–₹70,000 (rough estimate)"
+        if any(k in text for k in ("screen", "display", "hinge")):
+            repair = "₹3,000–₹15,000 (rough estimate; part/model dependent)"
+        elif any(k in text for k in ("battery", "charging", "keyboard", "fan")):
+            repair = "₹1,500–₹7,000 (rough estimate; part/model dependent)"
+    elif any(k in text for k in ("phone", "mobile", "smartphone", "iphone", "galaxy", "redmi", "realme", "pixel")):
+        repair = "₹800–₹6,000 (rough estimate)"
+        replacement = "₹8,000–₹30,000 (rough estimate)"
+        if any(k in text for k in ("screen", "display")):
+            repair = "₹2,000–₹12,000 (rough estimate; model dependent)"
+        elif "battery" in text:
+            repair = "₹800–₹3,500 (rough estimate; model dependent)"
+    elif any(k in text for k in ("tablet", "ipad")):
+        repair = "₹1,000–₹8,000 (rough estimate)"
+        replacement = "₹8,000–₹35,000 (rough estimate)"
+        if any(k in text for k in ("screen", "display")):
+            repair = "₹3,000–₹12,000 (rough estimate; model dependent)"
+    elif any(k in text for k in ("tv", "television")):
+        repair = "₹1,500–₹12,000 (rough estimate)"
+        replacement = "₹10,000–₹50,000 (rough estimate)"
+    elif any(k in text for k in ("earbud", "headphone", "headset", "speaker")):
+        repair = "₹500–₹2,500 (rough estimate)"
+        replacement = "₹1,000–₹8,000 (rough estimate)"
+    else:
+        repair = "₹500–₹5,000 (rough estimate; device type dependent)"
+        replacement = "₹2,000–₹20,000 (rough estimate; device type dependent)"
+
+    # If a genuine source-backed price already exists, do not overwrite it.
+    return repair, replacement
+
+
+def add_cost_estimates(result, model, symptoms):
+    """Fill missing/unverified prices with clearly labelled rough ranges."""
+    repair, replacement = estimate_cost_ranges(model, symptoms)
+    repair_value = str(result.get("repair_cost", "")).strip()
+    replace_value = str(result.get("replace_cost", "")).strip()
+    if not repair_value or repair_value.lower() in ("not verified", "not estimated", "unknown", "n/a"):
+        result["repair_cost"] = repair
+    if not replace_value or replace_value.lower() in ("not verified", "not estimated", "unknown", "n/a"):
+        result["replace_cost"] = replacement
+    note = "These are broad, rule-based planning ranges for India—not live prices or a technician quote. Actual cost depends on exact model, part quality and diagnosis."
+    result["comparison"] = (str(result.get("comparison", "")).strip() + " " + note).strip()
+    return result
+
 def build_rule_based_fallback(model, symptoms, budget):
     """Create transparent rule-based guidance when Gemini is unavailable.
 
@@ -446,7 +496,7 @@ def build_rule_based_fallback(model, symptoms, budget):
                 "summary": (page.get("content") or "Open the source to verify details.")[:350]
             })
 
-    return {
+    result = {
         "device": device_name,
         "damage": "AI image analysis unavailable. This result is based only on the symptom description entered by the user.",
         "confidence": "Rule-based · not image-verified",
@@ -459,6 +509,7 @@ def build_rule_based_fallback(model, symptoms, budget):
         "sources": sources,
         "questions": []
     }
+    return add_cost_estimates(result, model, symptoms)
 
 def search_web(query):
     """Search current public web pages. Empty list means no live evidence."""
@@ -548,8 +599,10 @@ def home():
                         "confidence": inspection.get("confidence", "Low"),
                         "questions": questions,
                         "repair_cost": "Not estimated",
-                        "replace_cost": "Not estimated"
+                        "replace_cost": "Not estimated",
+                        "comparison": "More information is needed for a confident assessment."
                     }
+                    result = add_cost_estimates(result, model, symptoms)
                 else:
                     query = inspection.get("search_query") or (
                         f"{model} {inspection.get('component', 'component')} "
@@ -605,6 +658,7 @@ def home():
                         "sources": sources,
                         "questions": []
                     }
+                    result = add_cost_estimates(result, model or inspection.get("device", ""), symptoms)
             except requests.HTTPError as exc:
                 status = exc.response.status_code if exc.response is not None else "unknown"
                 detail = ""
