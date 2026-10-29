@@ -84,7 +84,7 @@ header{
   background:rgba(22,117,255,.07);white-space:nowrap
 }
 main{max-width:1120px;margin:auto;padding:35px 20px 64px}
-.hero{padding:34px 0 29px;position:relative}
+.hero{padding:34px 0 29px;position:relative}\n.hero:before{content:"";display:block;width:58px;height:3px;margin-bottom:23px;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:4px;box-shadow:0 0 18px rgba(53,167,255,.55)}
 .eyebrow{color:var(--cyan);font-size:11px;font-weight:850;letter-spacing:2.3px;text-transform:uppercase}
 .eyebrow:before{content:"";display:inline-block;width:20px;height:2px;background:var(--blue);vertical-align:middle;margin-right:9px;box-shadow:0 0 10px var(--blue)}
 .hero h1{font-size:clamp(38px,6.5vw,66px);line-height:1.04;letter-spacing:-2.8px;margin:17px 0 15px;max-width:790px}
@@ -160,6 +160,14 @@ a:hover{color:white}
 .report-divider{height:1px;background:linear-gradient(90deg,rgba(53,167,255,.45),rgba(53,167,255,.02));margin:18px 0}
 footer{max-width:1120px;margin:auto;padding:0 20px 28px;text-align:center;color:#7185a4;font-size:11px;position:relative;z-index:1}
 .footer-mark{color:#9fddff}
+.footer-rule{height:1px;max-width:460px;margin:0 auto 17px;background:linear-gradient(90deg,transparent,rgba(53,167,255,.65),rgba(105,239,255,.55),transparent)}
+.footer-copy{letter-spacing:.15px}
+.powered-by{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:9px;color:#718db4;font-size:9px;letter-spacing:2.2px}
+.powered-by:before,.powered-by:after{content:"";width:24px;height:1px;background:rgba(105,239,255,.45)}
+.powered-by strong{font-size:11px;letter-spacing:2.8px;color:#69efff;text-shadow:0 0 14px rgba(53,167,255,.45)}
+.card:after{content:"";position:absolute;right:13px;bottom:13px;width:24px;height:24px;border-right:1px solid rgba(105,239,255,.2);border-bottom:1px solid rgba(105,239,255,.2);border-radius:0 0 7px 0;pointer-events:none}
+.hero:after{content:"R / 01";position:absolute;right:4px;bottom:27px;color:rgba(111,178,255,.38);font-size:10px;font-weight:800;letter-spacing:2px}
+@media(max-width:760px){.hero:after{display:none}.footer-copy{line-height:1.9}}
 @media(max-width:760px){
   header{padding:13px 16px}.brand-sub{letter-spacing:1px}.pill{font-size:8px;padding:6px 8px;letter-spacing:.7px}
   main{padding:22px 13px 42px}.hero{padding:25px 0 24px}.hero h1{letter-spacing:-1.8px}
@@ -182,7 +190,7 @@ footer{max-width:1120px;margin:auto;padding:0 20px 28px;text-align:center;color:
    <div class="brand-sub">CIRCULAR ELECTRONICS INTELLIGENCE</div>
   </div>
  </div>
- <div class="pill">EXPLAINABLE · CIRCULAR TECH</div>
+ <div class="pill">THE CODEX</div>
 </header>
 <main>
  <section class="hero">
@@ -290,7 +298,7 @@ footer{max-width:1120px;margin:auto;padding:0 20px 28px;text-align:center;color:
   </section>
  </div>
 </main>
-<footer><span class="footer-mark">ReLoop AI</span> · Repair first when safe and practical · Recover useful components · Recycle responsibly</footer>
+<footer><div class="footer-rule"></div><div class="footer-copy"><span class="footer-mark">ReLoop AI</span> · Repair first when safe and practical · Recover useful components · Recycle responsibly</div><div class="powered-by">POWERED BY <strong>THE CODEX</strong></div></footer>
 </body>
 </html>
 """
@@ -390,100 +398,3 @@ def home():
                     "to ask before recommending a pathway. Return JSON only with "
                     "keys: device, component, damage, confidence, search_query, "
                     "questions. confidence must be a cautious text label, not a "
-                    "fabricated calibrated probability. questions is an array.",
-                    [
-                        {"type": "input_text", "text":
-                         f"Symptoms: {symptoms}\nModel details: {model or 'Not supplied'}\n"
-                         "Identify what is visible, likely affected component, "
-                         "and what information is missing. Do not invent model numbers."},
-                        {"type": "input_image", "image_url": image_url}
-                    ]
-                )
-
-                questions = inspection.get("questions", [])
-                if questions:
-                    result = {
-                        "device": inspection.get("device", "Uncertain device"),
-                        "damage": inspection.get("damage", "Identity needs clarification."),
-                        "confidence": inspection.get("confidence", "Low"),
-                        "questions": questions,
-                        "repair_cost": "Not estimated",
-                        "replace_cost": "Not estimated"
-                    }
-                else:
-                    query = inspection.get("search_query") or (
-                        f"{model} {inspection.get('component', 'component')} "
-                        "repair replacement price India INR"
-                    )
-                    pages = search_web(query)
-                    sources = []
-                    for p in pages:
-                        url = p.get("url", "")
-                        if url.startswith("https://") or url.startswith("http://"):
-                            sources.append({
-                                "title": p.get("title", "Source page")[:180],
-                                "url": url,
-                                "summary": p.get("content", "Open source for details")[:350]
-                            })
-
-                    evidence = [{
-                        "title": s["title"], "url": s["url"],
-                        "summary": s["summary"]
-                    } for s in sources]
-
-                    decision = ask_ai(
-                        "You are ReLoop AI, an explainable electronics circularity "
-                        "decision assistant. Return JSON only with keys: decision, "
-                        "reason, reasons, comparison, repair_cost, replace_cost. "
-                        "decision must be exactly REPAIR, REPLACE, or RECYCLE. "
-                        "Use source evidence cautiously; search snippets may not "
-                        "contain prices. Never invent a live price. If no verified "
-                        "price appears, say 'Not verified'. Consider affordability, "
-                        "repairability, likely remaining useful life, efficiency, "
-                        "data/security, and environmental impact. Do not claim to "
-                        "measure efficiency unless evidence supports it. Explain "
-                        "uncertainty and recommend professional inspection when needed.",
-                        [{"type": "input_text", "text":
-                          f"Inspection: {json.dumps(inspection)}\n"
-                          f"Symptoms: {symptoms}\nModel: {model or 'Unknown'}\n"
-                          f"User repair budget INR: {budget or 'Not given'}\n"
-                          f"Web search evidence: {json.dumps(evidence)}\n"
-                          "Compare repair versus replacement. Only use RECYCLE "
-                          "when repair/reuse is unsafe, impractical or uneconomic. "
-                          "Do not treat absence of price evidence as a price of zero."}]
-                    )
-                    result = {
-                        "device": inspection.get("device", "Uncertain device"),
-                        "damage": inspection.get("damage", "Needs technician inspection."),
-                        "confidence": inspection.get("confidence", "Uncertain"),
-                        "decision": decision.get("decision", "REPAIR"),
-                        "reason": decision.get("reason", "Review the evidence with a technician."),
-                        "reasons": decision.get("reasons", []),
-                        "comparison": decision.get("comparison", "Price evidence may be incomplete."),
-                        "repair_cost": decision.get("repair_cost", "Not verified"),
-                        "replace_cost": decision.get("replace_cost", "Not verified"),
-                        "sources": sources,
-                        "questions": []
-                    }
-            except requests.HTTPError as exc:
-                status = exc.response.status_code if exc.response is not None else "unknown"
-                result = {"error": f"An API returned HTTP {status}. Check the API key, access and usage limits in your hosting settings."}
-            except requests.RequestException:
-                result = {"error": "A network/API request failed. Check the API keys and try again."}
-            except (ValueError, KeyError, json.JSONDecodeError) as exc:
-                result = {"error": f"Could not complete the analysis: {str(exc)[:220]}"}
-            except Exception:
-                result = {"error": "Unexpected error. Check the server logs for details."}
-
-    return render_template_string(
-        PAGE, result=result, symptoms=symptoms, model=model, budget=budget
-    )
-
-
-@app.errorhandler(413)
-def too_large(_error):
-    return "Image too large. Please upload an image under 8 MB.", 413
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=False)
