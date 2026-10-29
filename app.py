@@ -365,7 +365,7 @@ def ask_ai(instructions, content):
                     "maxOutputTokens": 1400
                 }
             },
-            timeout=(10, 65)
+            timeout=(10, 120)
         )
     except requests.Timeout as exc:
         logger.warning("Gemini request timed out (model=%s): %s", GEMINI_MODEL, type(exc).__name__)
