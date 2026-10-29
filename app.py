@@ -8,9 +8,9 @@ from flask import Flask, request, render_template_string
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
-AI_MODEL = os.getenv("AI_MODEL", "gpt-4o-mini")
 
 PAGE = r"""
 <!doctype html>
@@ -315,31 +315,67 @@ def extract_json(text):
 
 
 def ask_ai(instructions, content):
-    """Call the vision-capable AI model using the Responses API."""
+    """Call Gemini with text and optional base64 image content; return a JSON object."""
+    if not GEMINI_API_KEY:
+        raise ValueError(
+            "Gemini AI is not connected. Add GEMINI_API_KEY in Render Environment settings."
+        )
+
+    gemini_parts = []
+    for item in content:
+        item_type = item.get("type")
+        if item_type == "input_text":
+            gemini_parts.append({"text": item.get("text", "")})
+        elif item_type == "input_image":
+            image_url = item.get("image_url", "")
+            match = re.match(r"^data:([^;]+);base64,(.+)$", image_url, re.DOTALL)
+            if not match:
+                raise ValueError("The uploaded image could not be prepared for Gemini.")
+            gemini_parts.append({
+                "inlineData": {
+                    "mimeType": match.group(1),
+                    "data": match.group(2)
+                }
+            })
+
+    if not gemini_parts:
+        raise ValueError("No text or image content was provided to the AI.")
+
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{GEMINI_MODEL}:generateContent"
+    )
     response = requests.post(
-        "https://api.openai.com/v1/responses",
+        url,
         headers={
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "x-goog-api-key": GEMINI_API_KEY,
             "Content-Type": "application/json"
         },
         json={
-            "model": AI_MODEL,
-            "instructions": instructions,
-            "input": [{"role": "user", "content": content}],
-            "max_output_tokens": 1400
+            "systemInstruction": {"parts": [{"text": instructions}]},
+            "contents": [{"role": "user", "parts": gemini_parts}],
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "temperature": 0.2,
+                "maxOutputTokens": 1400
+            }
         },
         timeout=90
     )
     response.raise_for_status()
     data = response.json()
-    parts = []
-    for item in data.get("output", []):
-        for part in item.get("content", []):
-            if part.get("type") == "output_text":
-                parts.append(part.get("text", ""))
-    if not parts:
-        raise ValueError("The AI returned no readable text.")
-    return extract_json("\n".join(parts))
+    candidates = data.get("candidates", [])
+    if not candidates:
+        feedback = data.get("promptFeedback", {}).get("blockReason")
+        if feedback:
+            raise ValueError(f"Gemini blocked this request: {feedback}.")
+        raise ValueError("Gemini returned no response. Check model access and API quota.")
+
+    response_parts = candidates[0].get("content", {}).get("parts", [])
+    text_parts = [part.get("text", "") for part in response_parts if part.get("text")]
+    if not text_parts:
+        raise ValueError("Gemini returned no readable text. Try another image or model.")
+    return extract_json("\n".join(text_parts))
 
 
 def search_web(query):
@@ -375,8 +411,8 @@ def home():
         budget = request.form.get("budget", "").strip()
         photo = request.files.get("photo")
 
-        if not OPENAI_API_KEY:
-            result = {"error": "Vision AI is not connected yet. Add OPENAI_API_KEY in your hosting service's environment variables."}
+        if not GEMINI_API_KEY:
+            result = {"error": "Gemini AI is not connected yet. Add GEMINI_API_KEY in your hosting service's environment variables."}
         elif not photo or not photo.filename:
             result = {"error": "Please choose a device image first."}
         elif not symptoms:
@@ -475,7 +511,24 @@ def home():
                     }
             except requests.HTTPError as exc:
                 status = exc.response.status_code if exc.response is not None else "unknown"
-                result = {"error": f"An API returned HTTP {status}. Check the API key, access and usage limits in your hosting settings."}
+                detail = ""
+                if exc.response is not None:
+                    try:
+                        api_error = exc.response.json().get("error", {})
+                        detail = api_error.get("message", "")
+                    except (ValueError, AttributeError):
+                        pass
+                if status == 400:
+                    message = "Gemini rejected the request. Check the model name and image format."
+                elif status == 401 or status == 403:
+                    message = "Gemini API key or API access was rejected. Check GEMINI_API_KEY in Render."
+                elif status == 429:
+                    message = "Gemini free-tier quota or rate limit reached. Check the Google AI Studio usage limits and try later."
+                else:
+                    message = f"Gemini API returned HTTP {status}. Check model access and usage limits."
+                if detail:
+                    message += " Details: " + detail[:240]
+                result = {"error": message}
             except requests.RequestException:
                 result = {"error": "A network/API request failed. Check the API keys and try again."}
             except (ValueError, KeyError, json.JSONDecodeError) as exc:
