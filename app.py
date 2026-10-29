@@ -16,6 +16,97 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip() or "gemini-3.8-flash"
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 
+
+# Curated starter database for common models. Values are stored snapshots, not live quotes.
+# Repair figures from third-party/authorised-provider listings must be rechecked before payment.
+STORED_PRICE_DATABASE = [
+    {
+        "aliases": ["samsung galaxy a15 5g", "galaxy a15 5g", "sm-a156"],
+        "brand": "Samsung", "model": "Galaxy A15 5G",
+        "repair_by_issue": {
+            "display": "₹3,370 listed display-part price (labour/tax may be extra)",
+            "battery": "₹1,580 listed battery-part price (labour/tax may be extra)"
+        },
+        "replacement": "₹12,000–₹18,000 (indicative retail band; verify current price)",
+        "source_title": "Galaxy A15 5G parts listing; verify with Samsung service",
+        "source_url": "https://samsung-parts.trackit.co.in/india/mobile/galaxy-a15-5g",
+        "official_url": "https://www.samsung.com/in/support/spare-part-pricing-list-for-repair/",
+        "source_note": "Third-party parts listing; Samsung says listed spare-part prices may exclude labour and GST. Confirm the exact variant and final quote."
+    },
+    {
+        "aliases": ["iphone 17 pro max"], "brand": "Apple", "model": "iPhone 17 Pro Max",
+        "repair_by_issue": {"display": "₹44,346 listed display replacement charge", "battery": "₹7,363 listed battery replacement charge"},
+        "replacement": "₹1,40,000–₹1,80,000 (indicative retail band; verify current price)",
+        "source_title": "Aptronix India iPhone repair charges",
+        "source_url": "https://portal.aptronixindia.com/service/replacement-charges",
+        "official_url": "https://support.apple.com/en-in/iphone/repair",
+        "source_note": "Aptronix-listed service charges; final fees may vary. Confirm the current Apple/AASP quote."
+    },
+    {
+        "aliases": ["iphone 17 pro"], "brand": "Apple", "model": "iPhone 17 Pro",
+        "repair_by_issue": {"display": "₹37,506 listed display replacement charge", "battery": "₹7,363 listed battery replacement charge"},
+        "replacement": "₹1,20,000–₹1,60,000 (indicative retail band; verify current price)",
+        "source_title": "Aptronix India iPhone repair charges",
+        "source_url": "https://portal.aptronixindia.com/service/replacement-charges",
+        "official_url": "https://support.apple.com/en-in/iphone/repair",
+        "source_note": "Aptronix-listed service charges; final fees may vary. Confirm the current Apple/AASP quote."
+    },
+    {
+        "aliases": ["iphone 17"], "brand": "Apple", "model": "iPhone 17",
+        "repair_by_issue": {"display": "₹37,506 listed display replacement charge", "battery": "₹6,115 listed battery replacement charge"},
+        "replacement": "₹75,000–₹1,00,000 (indicative retail band; verify current price)",
+        "source_title": "Aptronix India iPhone repair charges",
+        "source_url": "https://portal.aptronixindia.com/service/replacement-charges",
+        "official_url": "https://support.apple.com/en-in/iphone/repair",
+        "source_note": "Aptronix-listed service charges; final fees may vary. Confirm the current Apple/AASP quote."
+    },
+    {
+        "aliases": ["iphone 16 pro max"], "brand": "Apple", "model": "iPhone 16 Pro Max",
+        "repair_by_issue": {"display": "₹41,078 listed display replacement charge", "battery": "₹7,363 listed battery replacement charge"},
+        "replacement": "₹1,00,000–₹1,40,000 (indicative retail band; verify current price)",
+        "source_title": "Aptronix India iPhone repair charges",
+        "source_url": "https://portal.aptronixindia.com/service/replacement-charges",
+        "official_url": "https://support.apple.com/en-in/iphone/repair",
+        "source_note": "Aptronix-listed service charges; final fees may vary. Confirm the current Apple/AASP quote."
+    },
+    {
+        "aliases": ["iphone 16 pro"], "brand": "Apple", "model": "iPhone 16 Pro",
+        "repair_by_issue": {"display": "₹34,742 listed display replacement charge", "battery": "₹7,363 listed battery replacement charge"},
+        "replacement": "₹90,000–₹1,20,000 (indicative retail band; verify current price)",
+        "source_title": "Aptronix India iPhone repair charges",
+        "source_url": "https://portal.aptronixindia.com/service/replacement-charges",
+        "official_url": "https://support.apple.com/en-in/iphone/repair",
+        "source_note": "Aptronix-listed service charges; final fees may vary. Confirm the current Apple/AASP quote."
+    },
+    {
+        "aliases": ["iphone 16 plus"], "brand": "Apple", "model": "iPhone 16 Plus",
+        "repair_by_issue": {"display": "₹34,742 listed display replacement charge", "battery": "₹6,115 listed battery replacement charge"},
+        "replacement": "₹70,000–₹95,000 (indicative retail band; verify current price)",
+        "source_title": "Aptronix India iPhone repair charges",
+        "source_url": "https://portal.aptronixindia.com/service/replacement-charges",
+        "official_url": "https://support.apple.com/en-in/iphone/repair",
+        "source_note": "Aptronix-listed service charges; final fees may vary. Confirm the current Apple/AASP quote."
+    },
+    {
+        "aliases": ["iphone 16"], "brand": "Apple", "model": "iPhone 16",
+        "repair_by_issue": {"display": "₹26,928 listed display replacement charge", "battery": "₹6,115 listed battery replacement charge"},
+        "replacement": "₹55,000–₹80,000 (indicative retail band; verify current price)",
+        "source_title": "Aptronix India iPhone repair charges",
+        "source_url": "https://portal.aptronixindia.com/service/replacement-charges",
+        "official_url": "https://support.apple.com/en-in/iphone/repair",
+        "source_note": "Aptronix-listed service charges; final fees may vary. Confirm the current Apple/AASP quote."
+    },
+    {
+        "aliases": ["iphone 15 pro max"], "brand": "Apple", "model": "iPhone 15 Pro Max",
+        "repair_by_issue": {"display": "₹39,211 listed display replacement charge", "battery": "₹6,115 listed battery replacement charge"},
+        "replacement": "₹85,000–₹1,25,000 (indicative retail/availability band; verify current price)",
+        "source_title": "Aptronix India iPhone repair charges",
+        "source_url": "https://portal.aptronixindia.com/service/replacement-charges",
+        "official_url": "https://support.apple.com/en-in/iphone/repair",
+        "source_note": "Aptronix-listed service charges; final fees may vary. Confirm the current Apple/AASP quote."
+    }
+]
+
 PAGE = r"""
 <!doctype html>
 <html lang="en">
@@ -437,16 +528,65 @@ def estimate_cost_ranges(model, symptoms):
     return repair, replacement
 
 
+def find_stored_price_record(model):
+    """Find an exact/alias model match in the built-in price snapshot database."""
+    text = re.sub(r"[^a-z0-9]+", " ", (model or "").lower()).strip()
+    if not text:
+        return None
+    # Longest aliases first prevents e.g. iPhone 16 matching iPhone 16 Pro Max.
+    records = sorted(STORED_PRICE_DATABASE, key=lambda row: max(map(len, row["aliases"])), reverse=True)
+    for record in records:
+        for alias in record["aliases"]:
+            normal_alias = re.sub(r"[^a-z0-9]+", " ", alias.lower()).strip()
+            if normal_alias and normal_alias in text:
+                return record
+    return None
+
+
 def add_cost_estimates(result, model, symptoms):
-    """Fill missing/unverified prices with clearly labelled rough ranges."""
+    """Prefer stored model/issue prices where available; otherwise use broad ranges."""
     repair, replacement = estimate_cost_ranges(model, symptoms)
     repair_value = str(result.get("repair_cost", "")).strip()
     replace_value = str(result.get("replace_cost", "")).strip()
-    if not repair_value or repair_value.lower() in ("not verified", "not estimated", "unknown", "n/a"):
+    unknown_values = ("", "not verified", "not estimated", "unknown", "n/a", "none")
+    symptom_text = f"{model or ''} {symptoms or ''}".lower()
+    record = find_stored_price_record(model)
+    stored_repair = None
+    if record:
+        if any(term in symptom_text for term in ("screen", "display", "cracked", "broken glass")):
+            stored_repair = record.get("repair_by_issue", {}).get("display")
+        elif any(term in symptom_text for term in ("battery", "does not hold charge", "drains fast")):
+            stored_repair = record.get("repair_by_issue", {}).get("battery")
+
+    # Use stored model-specific figures instead of generic bands when the user
+    # has not received a source-backed price from the live analysis.
+    if stored_repair and (repair_value.lower() in unknown_values or "rough estimate" in repair_value.lower()):
+        result["repair_cost"] = stored_repair
+    elif repair_value.lower() in unknown_values:
         result["repair_cost"] = repair
-    if not replace_value or replace_value.lower() in ("not verified", "not estimated", "unknown", "n/a"):
+
+    if record and (replace_value.lower() in unknown_values or "rough estimate" in replace_value.lower()):
+        result["replace_cost"] = record.get("replacement", replacement)
+    elif replace_value.lower() in unknown_values:
         result["replace_cost"] = replacement
-    note = "These are broad, rule-based planning ranges for India—not live prices or a technician quote. Actual cost depends on exact model, part quality and diagnosis."
+
+    sources = result.get("sources") or []
+    if record:
+        source_urls = {source.get("url") for source in sources}
+        for title, url, summary in [
+            (record.get("source_title", "Stored price source"), record.get("source_url", ""), record.get("source_note", "")),
+            ("Manufacturer repair pricing / service guidance", record.get("official_url", ""), "Manufacturer guidance. Final prices depend on exact variant, taxes, labour, warranty and technician diagnosis.")
+        ]:
+            if url and url not in source_urls:
+                sources.append({"title": title, "url": url, "summary": summary})
+                source_urls.add(url)
+        result["sources"] = sources
+        note = (f"Stored database match: {record['brand']} {record['model']}. "
+                "Repair figures are from the linked price listing and may cover parts/service charges only. "
+                "Replacement figures are indicative stored retail bands, not live prices. Verify the current final quote.")
+    else:
+        note = ("No exact model entry was found in the stored price database, so broad rule-based planning ranges are shown. "
+                "These are not live prices or a technician quote; actual cost depends on exact model, part quality and diagnosis.")
     result["comparison"] = (str(result.get("comparison", "")).strip() + " " + note).strip()
     return result
 
@@ -503,7 +643,7 @@ def build_rule_based_fallback(model, symptoms, budget):
         "decision": decision,
         "reason": reason,
         "reasons": reasons,
-        "comparison": (f"Budget entered: ₹{budget}. " if budget else "No budget supplied. ") + "Repair and replacement prices are not verified unless a source link below provides current evidence.",
+        "comparison": (f"Budget entered: ₹{budget}. " if budget else "No budget supplied. ") + "The stored price database is checked for a model match; unmatched models use broad planning ranges.",
         "repair_cost": "Not verified",
         "replace_cost": "Not verified",
         "sources": sources,
