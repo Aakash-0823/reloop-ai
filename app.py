@@ -423,6 +423,7 @@ footer{max-width:1120px;margin:auto;padding:0 20px 28px;text-align:center;color:
    <div class="team-member"><strong>Abishajesudhas</strong> <span>· Team Leader · 146110026</span></div>
    <div class="team-member"><strong>Aakashwar.s</strong> <span>· 146110004</span></div>
    <div class="team-member"><strong>Abenav</strong> <span>· 146110015</span></div>
+   <div class="team-member"><strong>Aadeshraj</strong> <span>· 146110001</span></div>
    <div class="team-member"><strong>Ankitha</strong> <span>· 146110059</span></div>
    <div class="team-member"><strong>Anisha</strong> <span>· 146110058</span></div>
   </div>
