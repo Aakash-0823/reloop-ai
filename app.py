@@ -365,7 +365,7 @@ def ask_ai(instructions, content):
                     "maxOutputTokens": 1400
                 }
             },
-            timeout=(10, 120)
+            timeout=(10, 65)
         )
     except requests.Timeout as exc:
         logger.warning("Gemini request timed out (model=%s): %s", GEMINI_MODEL, type(exc).__name__)
@@ -398,6 +398,67 @@ def ask_ai(instructions, content):
         raise ValueError("Gemini returned no readable text. Try another image or model.")
     return extract_json("\n".join(text_parts))
 
+
+
+def build_rule_based_fallback(model, symptoms, budget):
+    """Create transparent rule-based guidance when Gemini is unavailable.
+
+    This function deliberately does not claim to inspect or understand the uploaded image.
+    """
+    symptom_text = (symptoms or "").lower()
+    device_name = model.strip() if model and model.strip() else "Electronics device (model not supplied)"
+
+    urgent_terms = ("smoke", "sparks", "burning smell", "swollen battery", "bulging battery", "overheating", "wet", "liquid damage")
+    if any(term in symptom_text for term in urgent_terms):
+        decision = "INSPECT FIRST"
+        reason = ("The symptom description may indicate a safety or internal-damage issue. Stop using or charging the device and have it checked by a qualified technician. This is a text-based rule, not an image diagnosis.")
+        reasons = [
+            "Safety-related symptoms need professional inspection before repair or reuse.",
+            "The uploaded photo has not been analysed by AI in this fallback mode.",
+            "Do not decide to recycle or replace solely from the symptom text."
+        ]
+    elif any(term in symptom_text for term in ("cracked", "broken screen", "screen", "display", "charging port", "connector", "keyboard", "speaker", "button")):
+        decision = "REPAIR REVIEW"
+        reason = "A repair assessment is a reasonable first step, but the actual fault and repairability have not been verified. This recommendation uses the symptom text only; the image was not analysed by AI."
+        reasons = [
+            "Ask a technician to confirm the failed component and repair cost.",
+            "Compare the verified repair quote with the cost of a suitable replacement.",
+            "Check parts availability, warranty, and data backup needs before deciding."
+        ]
+    else:
+        decision = "INSPECT FIRST"
+        reason = "There is not enough verified information to recommend repair, replacement, or recovery confidently. This fallback uses the symptom text only; the image was not analysed by AI."
+        reasons = [
+            "Record the exact model and symptoms.",
+            "Get a technician's diagnosis and a written repair estimate.",
+            "Compare repair cost and expected remaining useful life before choosing a pathway."
+        ]
+
+    query = f"{device_name} repair parts price India INR {symptoms or ''}".strip()
+    pages = search_web(query) if TAVILY_API_KEY else []
+    sources = []
+    for page in pages:
+        url = page.get("url", "")
+        if url.startswith(("https://", "http://")):
+            sources.append({
+                "title": (page.get("title") or "Source page")[:180],
+                "url": url,
+                "summary": (page.get("content") or "Open the source to verify details.")[:350]
+            })
+
+    return {
+        "device": device_name,
+        "damage": "AI image analysis unavailable. This result is based only on the symptom description entered by the user.",
+        "confidence": "Rule-based · not image-verified",
+        "decision": decision,
+        "reason": reason,
+        "reasons": reasons,
+        "comparison": (f"Budget entered: ₹{budget}. " if budget else "No budget supplied. ") + "Repair and replacement prices are not verified unless a source link below provides current evidence.",
+        "repair_cost": "Not verified",
+        "replace_cost": "Not verified",
+        "sources": sources,
+        "questions": []
+    }
 
 def search_web(query):
     """Search current public web pages. Empty list means no live evidence."""
@@ -440,7 +501,14 @@ def home():
         photo = request.files.get("photo")
 
         if not GEMINI_API_KEY:
-            result = {"error": "Gemini AI is not connected yet. Add GEMINI_API_KEY in your hosting service's environment variables."}
+            if not photo or not photo.filename:
+                result = {"error": "Please choose a device image first."}
+            elif not symptoms:
+                result = {"error": "Please describe the symptoms first."}
+            elif photo.mimetype not in ("image/jpeg", "image/png", "image/webp"):
+                result = {"error": "Use a JPG, PNG or WebP image."}
+            else:
+                result = build_rule_based_fallback(model, symptoms, budget)
         elif not photo or not photo.filename:
             result = {"error": "Please choose a device image first."}
         elif not symptoms:
@@ -556,12 +624,18 @@ def home():
                     message = f"Gemini API returned HTTP {status}. Check model access and usage limits."
                 if detail:
                     message += " Details: " + detail[:240]
-                result = {"error": message}
+                if status == 503 or status == 429 or (isinstance(status, int) and status >= 500):
+                    result = build_rule_based_fallback(model, symptoms, budget)
+                    result["comparison"] = "Gemini is temporarily unavailable, so this is a rule-based fallback. " + result["comparison"]
+                else:
+                    result = {"error": message}
             except requests.RequestException as exc:
                 logger.warning("External API request failed: %s", type(exc).__name__)
-                result = {"error": "The AI service request failed. Check the model and API access in Render, then try again."}
+                result = build_rule_based_fallback(model, symptoms, budget)
+                result["comparison"] = "An external service failed, so this is a rule-based fallback. " + result["comparison"]
             except RuntimeError as exc:
-                result = {"error": str(exc)}
+                result = build_rule_based_fallback(model, symptoms, budget)
+                result["comparison"] = "AI analysis could not finish, so this is a rule-based fallback. " + result["comparison"]
             except (ValueError, KeyError, json.JSONDecodeError) as exc:
                 result = {"error": f"Could not complete the analysis: {str(exc)[:220]}"}
             except Exception:
