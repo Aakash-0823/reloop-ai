@@ -18,96 +18,231 @@ PAGE = r"""
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050a18">
+<meta name="description" content="ReLoop AI — explainable electronics repair and component-recovery intelligence.">
 <title>ReLoop AI | Circular Electronics Intelligence</title>
 <style>
-:root{--bg:#08130f;--panel:#10221a;--line:#244333;--green:#a9f16c;
---muted:#a8b9ad;--white:#f3f7f1;--orange:#ffca80}
+:root{
+  color-scheme:dark;
+  --bg:#050a18;
+  --bg2:#081329;
+  --panel:rgba(12,24,49,.88);
+  --panel2:#0a1630;
+  --line:rgba(62,139,255,.25);
+  --line-strong:rgba(69,164,255,.58);
+  --blue:#35a7ff;
+  --cyan:#69efff;
+  --blue-deep:#1675ff;
+  --muted:#9eafca;
+  --white:#f2f7ff;
+  --orange:#ffc779;
+  --shadow:0 18px 55px rgba(0,0,0,.24);
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--white);
-font:15px/1.6 Arial,sans-serif}
-header{padding:20px 5%;border-bottom:1px solid var(--line);
-display:flex;justify-content:space-between;align-items:center;gap:12px}
-.logo{font-size:22px;font-weight:800;letter-spacing:-1px}
-.logo span{color:var(--green)}
-.pill{border:1px solid var(--line);border-radius:30px;padding:6px 12px;
-color:var(--green);font-size:12px}
-main{max-width:1050px;margin:auto;padding:35px 18px 70px}
-.hero{padding:25px 0 28px}
-.eyebrow{color:var(--green);font-size:12px;font-weight:bold;letter-spacing:2px}
-h1{font-size:clamp(32px,6vw,54px);line-height:1.08;letter-spacing:-2px;
-margin:12px 0}
-h1 span{color:var(--green)}
+html{scroll-behavior:smooth}
+body{
+  margin:0;min-height:100vh;overflow-x:hidden;position:relative;
+  background:
+    radial-gradient(ellipse at 12% 8%,rgba(18,100,255,.17),transparent 35%),
+    radial-gradient(ellipse at 88% 30%,rgba(0,225,255,.09),transparent 32%),
+    linear-gradient(145deg,var(--bg),#071126 52%,#040914);
+  color:var(--white);font:15px/1.65 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.22;
+  background-image:linear-gradient(rgba(70,144,255,.09) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(70,144,255,.09) 1px,transparent 1px);
+  background-size:38px 38px;
+  mask-image:linear-gradient(to bottom,black,transparent 88%);
+}
+body:after{
+  content:"";position:fixed;width:360px;height:360px;right:-210px;top:160px;
+  border:1px solid rgba(53,167,255,.16);border-radius:50%;
+  box-shadow:0 0 0 28px rgba(53,167,255,.025),0 0 0 58px rgba(53,167,255,.02);
+  pointer-events:none;z-index:0;
+}
+header,main,footer{position:relative;z-index:1}
+header{
+  padding:17px 5%;border-bottom:1px solid rgba(81,151,255,.2);
+  display:flex;justify-content:space-between;align-items:center;gap:14px;
+  background:rgba(5,10,24,.78);backdrop-filter:blur(18px);
+  position:sticky;top:0;z-index:5;
+}
+.brand{display:flex;align-items:center;gap:11px}
+.logo-mark{
+  width:39px;height:39px;border-radius:12px;display:grid;place-items:center;
+  border:1px solid rgba(105,239,255,.48);
+  background:linear-gradient(145deg,rgba(53,167,255,.22),rgba(22,117,255,.06));
+  color:var(--cyan);font-size:21px;box-shadow:inset 0 0 20px rgba(53,167,255,.08),0 0 24px rgba(53,167,255,.12)
+}
+.logo{font-size:21px;font-weight:850;letter-spacing:-.8px;line-height:1.1}
+.logo span{color:var(--cyan)}
+.brand-sub{font-size:9px;color:#8da7cb;letter-spacing:1.65px;margin-top:4px}
+.pill{
+  border:1px solid rgba(75,158,255,.35);border-radius:30px;padding:7px 12px;
+  color:#a9dfff;font-size:10px;letter-spacing:1.3px;font-weight:800;
+  background:rgba(22,117,255,.07);white-space:nowrap
+}
+main{max-width:1120px;margin:auto;padding:35px 20px 64px}
+.hero{padding:34px 0 29px;position:relative}
+.eyebrow{color:var(--cyan);font-size:11px;font-weight:850;letter-spacing:2.3px;text-transform:uppercase}
+.eyebrow:before{content:"";display:inline-block;width:20px;height:2px;background:var(--blue);vertical-align:middle;margin-right:9px;box-shadow:0 0 10px var(--blue)}
+.hero h1{font-size:clamp(38px,6.5vw,66px);line-height:1.04;letter-spacing:-2.8px;margin:17px 0 15px;max-width:790px}
+.hero h1 span{
+  color:transparent;background:linear-gradient(90deg,#55b8ff 0%,#70f1ff 54%,#4a8dff 100%);
+  -webkit-background-clip:text;background-clip:text
+}
+.hero p{color:var(--muted);max-width:650px;font-size:16px;margin:0}
+.hero-meta{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}
+.meta-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid rgba(87,149,231,.2);border-radius:8px;background:rgba(9,24,49,.58);font-size:11px;color:#b6c7e1}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 9px var(--cyan)}
+.layout{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:19px;align-items:start}
+.card{
+  position:relative;min-width:0;overflow:hidden;
+  background:linear-gradient(145deg,rgba(13,28,56,.94),rgba(7,17,37,.96));
+  border:1px solid var(--line);border-radius:19px;padding:23px;
+  box-shadow:var(--shadow);backdrop-filter:blur(12px)
+}
+.card:before{content:"";position:absolute;left:0;top:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--blue),var(--cyan),transparent);opacity:.85}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:15px}
+.section-code{font-size:10px;letter-spacing:1.8px;color:#79baff;font-weight:850}
+h2{font-size:19px;letter-spacing:-.35px;margin:4px 0 7px}
 p{color:var(--muted)}
-.layout{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.card{background:var(--panel);border:1px solid var(--line);
-border-radius:18px;padding:22px;min-width:0}
-h2{font-size:19px;margin:0 0 12px}
-label{display:block;margin:15px 0 6px;font-weight:bold;font-size:13px}
-input,textarea,select{width:100%;padding:12px;border-radius:10px;
-border:1px solid var(--line);background:#091710;color:white;font:inherit}
-input[type=file]{font-size:13px}
-textarea{min-height:90px;resize:vertical}
-button{background:var(--green);color:#10200c;border:0;border-radius:10px;
-padding:14px 18px;font-weight:800;font-size:15px;cursor:pointer;width:100%;
-margin-top:18px}
-button:hover{filter:brightness(1.07)}
-.small{font-size:12px;color:var(--muted)}
-.notice{background:#172c20;border:1px solid #385c3b;border-radius:10px;
-padding:12px;margin:14px 0;color:#d6e9d1;font-size:13px}
+.card-intro{font-size:12px;margin:0 0 16px;color:#9eafca}
+.micro-tag{font-size:9px;color:#9fddff;border:1px solid rgba(53,167,255,.25);padding:5px 8px;border-radius:7px;white-space:nowrap;letter-spacing:1px}
+label{display:block;margin:15px 0 7px;font-weight:750;font-size:12px;color:#dceaff}
+input,textarea,select{
+  width:100%;padding:12px 13px;border-radius:10px;
+  border:1px solid rgba(81,143,224,.28);background:rgba(4,12,28,.8);
+  color:var(--white);font:inherit;outline:none;transition:border-color .2s,box-shadow .2s
+}
+input:focus,textarea:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(53,167,255,.12)}
+input::placeholder,textarea::placeholder{color:#637795}
+input[type=file]{font-size:12px;padding:10px}
+input[type=file]::file-selector-button{border:1px solid rgba(76,157,255,.35);background:#10284b;color:#c6e8ff;border-radius:7px;padding:7px 9px;margin-right:10px;cursor:pointer}
+textarea{min-height:100px;resize:vertical}
+.field-hint{font-size:10px;color:#7388a9;margin-top:5px}
+button{
+  display:flex;justify-content:center;align-items:center;gap:9px;
+  background:linear-gradient(105deg,#1c83ff,#36c5ff 58%,#68efff);
+  color:#04101f;border:1px solid rgba(156,239,255,.7);border-radius:11px;
+  padding:14px 18px;font-weight:900;font-size:14px;letter-spacing:.1px;
+  cursor:pointer;width:100%;margin-top:20px;
+  box-shadow:0 8px 24px rgba(27,133,255,.22),inset 0 1px 0 rgba(255,255,255,.35);
+  transition:transform .18s,filter .18s,box-shadow .18s
+}
+button:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 11px 30px rgba(27,133,255,.32)}
+button:active{transform:translateY(0)}
+.notice{
+  background:rgba(15,42,73,.62);border:1px solid rgba(71,157,255,.27);
+  border-radius:11px;padding:12px 13px;margin:15px 0;color:#c6e6ff;font-size:12px
+}
+.notice strong{color:#eaf7ff}
 .result{margin-top:22px}
-.verdict{font-size:30px;font-weight:900;color:var(--green);margin:4px 0}
-.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:15px 0}
-.stat{padding:13px;background:#091710;border:1px solid var(--line);
-border-radius:12px;overflow-wrap:anywhere}
-.stat strong{display:block;font-size:16px}
-.stat span{font-size:11px;color:var(--muted)}
-ul{padding-left:20px}
-li{margin:7px 0}
-a{color:var(--green);overflow-wrap:anywhere}
-footer{padding-top:25px;text-align:center;color:var(--muted);font-size:12px}
-@media(max-width:700px){.layout{grid-template-columns:1fr}header{padding:16px}
-main{padding:22px 13px 45px}.statgrid{grid-template-columns:1fr 1fr}}
+.report-empty{min-height:230px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px 8px}
+.scan-icon{width:68px;height:68px;border-radius:19px;display:grid;place-items:center;font-size:29px;color:var(--cyan);border:1px solid rgba(86,184,255,.35);background:radial-gradient(circle at 50% 35%,rgba(51,168,255,.2),rgba(9,24,49,.3));box-shadow:0 0 35px rgba(37,140,255,.1);margin-bottom:17px}
+.report-empty h3{margin:0 0 7px;font-size:16px}
+.report-empty p{font-size:12px;max-width:290px;margin:0}
+.statgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:17px 0}
+.stat{padding:12px;background:rgba(4,12,28,.72);border:1px solid rgba(74,139,220,.2);border-radius:11px;overflow-wrap:anywhere;min-width:0}
+.stat strong{display:block;font-size:14px;color:#c9edff;line-height:1.4}
+.stat span{display:block;font-size:9px;color:#839bbd;margin-top:5px;text-transform:uppercase;letter-spacing:.6px}
+.verdict{font-size:29px;font-weight:950;letter-spacing:-.7px;color:var(--cyan);margin:3px 0;text-shadow:0 0 22px rgba(53,167,255,.2)}
+.result h3{font-size:13px;margin:21px 0 7px;color:#e0eeff}
+.result p{font-size:13px}
+ul{padding-left:19px}
+li{margin:7px 0;color:#b7c8e1;font-size:12px}
+a{color:#73dfff;overflow-wrap:anywhere;text-decoration-color:rgba(115,223,255,.35);text-underline-offset:3px}
+a:hover{color:white}
+.small{font-size:11px;color:#8499b8}
+.status-line{display:flex;align-items:center;gap:8px;font-size:10px;color:#91a8c8;letter-spacing:.8px;margin-bottom:13px}
+.status-line .dot{flex-shrink:0}
+.report-divider{height:1px;background:linear-gradient(90deg,rgba(53,167,255,.45),rgba(53,167,255,.02));margin:18px 0}
+footer{max-width:1120px;margin:auto;padding:0 20px 28px;text-align:center;color:#7185a4;font-size:11px;position:relative;z-index:1}
+.footer-mark{color:#9fddff}
+@media(max-width:760px){
+  header{padding:13px 16px}.brand-sub{letter-spacing:1px}.pill{font-size:8px;padding:6px 8px;letter-spacing:.7px}
+  main{padding:22px 13px 42px}.hero{padding:25px 0 24px}.hero h1{letter-spacing:-1.8px}
+  .layout{grid-template-columns:1fr}.card{padding:19px}.statgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:420px){
+  .brand-sub{display:none}.logo{font-size:19px}.logo-mark{width:35px;height:35px}
+  .pill{max-width:130px;white-space:normal;text-align:center;line-height:1.35}
+  .statgrid{grid-template-columns:1fr}.stat{display:flex;justify-content:space-between;align-items:center;gap:12px}.stat span{margin:0;text-align:right}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
 </style>
 </head>
 <body>
 <header>
- <div class="logo">♻ ReLoop<span> AI</span></div>
- <div class="pill">EXPLAINABLE • CIRCULAR TECH</div>
+ <div class="brand">
+  <div class="logo-mark" aria-hidden="true">⌘</div>
+  <div>
+   <div class="logo">ReLoop<span> AI</span></div>
+   <div class="brand-sub">CIRCULAR ELECTRONICS INTELLIGENCE</div>
+  </div>
+ </div>
+ <div class="pill">EXPLAINABLE · CIRCULAR TECH</div>
 </header>
 <main>
  <section class="hero">
   <div class="eyebrow">ELECTRONICS REPAIR INTELLIGENCE</div>
   <h1>Give your device<br>a <span>second life.</span></h1>
-  <p>Upload a photo, describe the symptoms, and explore evidence-based
-  repair, replacement and recycling options.</p>
+  <p>Inspect visible damage, compare repair and replacement options, and make a more informed decision about the next life of your electronics.</p>
+  <div class="hero-meta">
+   <span class="meta-chip"><i class="dot"></i> Image-assisted inspection</span>
+   <span class="meta-chip"><i class="dot"></i> Evidence-aware decisions</span>
+   <span class="meta-chip"><i class="dot"></i> Circular-use pathways</span>
+  </div>
  </section>
 
  <div class="layout">
   <section class="card">
-   <h2>01 / Device inspection</h2>
-   <p class="small">A clear photo helps the AI inspect visible damage.</p>
+   <div class="card-head">
+    <div>
+     <div class="section-code">01 / DEVICE INPUT</div>
+     <h2>Device inspection</h2>
+    </div>
+    <span class="micro-tag">INPUT MODULE</span>
+   </div>
+   <p class="card-intro">Add a clear photo and the symptoms you have observed. The system will assess visible clues and identify where more information is needed.</p>
    <form method="post" enctype="multipart/form-data">
     <label for="photo">Device or component image *</label>
     <input id="photo" type="file" name="photo" accept="image/png,image/jpeg,image/webp" required>
+    <div class="field-hint">JPG, PNG or WebP · Maximum 8 MB</div>
+
     <label for="symptoms">Symptoms and observed damage *</label>
     <textarea id="symptoms" name="symptoms" required
     placeholder="Example: Laptop overheats, fan makes noise, shuts down after 10 minutes...">{{ symptoms }}</textarea>
+
     <label for="model">Brand, model or component (if known)</label>
     <input id="model" name="model" value="{{ model }}"
     placeholder="Example: Dell Inspiron, model unknown">
+
     <label for="budget">Repair budget (INR, optional)</label>
     <input id="budget" name="budget" type="number" min="0" value="{{ budget }}"
     placeholder="Example: 2500">
-    <button type="submit">✦ Analyse my device</button>
+    <button type="submit"><span aria-hidden="true">✨</span> Analyse my device</button>
    </form>
-   <div class="notice">For safety, do not open batteries, power supplies or
-   mains-powered devices. The photo cannot confirm hidden internal faults.</div>
+   <div class="notice"><strong>Safety note</strong><br>Do not open batteries, power supplies or mains-powered devices. A photo cannot confirm hidden internal faults; consult a qualified technician when needed.</div>
   </section>
 
   <section class="card">
-   <h2>02 / Intelligence report</h2>
+   <div class="card-head">
+    <div>
+     <div class="section-code">02 / DECISION OUTPUT</div>
+     <h2>Intelligence report</h2>
+    </div>
+    <span class="micro-tag">ANALYSIS MODULE</span>
+   </div>
+   <div class="status-line"><i class="dot"></i> EXPLAINABLE DECISION SUPPORT</div>
    {% if not result %}
-    <p>Your report will appear here after you submit a device image and symptoms.</p>
+    <div class="report-empty">
+     <div class="scan-icon" aria-hidden="true">⌁</div>
+     <h3>Your report starts here</h3>
+     <p>Submit a device image and symptoms to generate an inspection summary and a suggested circular-use pathway.</p>
+    </div>
+    <div class="report-divider"></div>
     <div class="statgrid">
      <div class="stat"><strong>Vision AI</strong><span>Image inspection</span></div>
      <div class="stat"><strong>Web search</strong><span>Price evidence</span></div>
@@ -115,7 +250,7 @@ main{padding:22px 13px 45px}.statgrid{grid-template-columns:1fr 1fr}}
     </div>
    {% else %}
     {% if result.error %}
-      <div class="notice">{{ result.error }}</div>
+      <div class="notice"><strong>Analysis needs attention</strong><br>{{ result.error }}</div>
     {% else %}
       <div class="eyebrow">AI INSPECTION</div>
       <h2>{{ result.device }}</h2>
@@ -130,6 +265,7 @@ main{padding:22px 13px 45px}.statgrid{grid-template-columns:1fr 1fr}}
        <ul>{% for q in result.questions %}<li>{{ q }}</li>{% endfor %}</ul>
        Please add the answers in the model or symptoms fields and analyse again.</div>
       {% else %}
+       <div class="report-divider"></div>
        <div class="eyebrow">RECOMMENDED PATHWAY</div>
        <div class="verdict">{{ result.decision }}</div>
        <p>{{ result.reason }}</p>
@@ -147,14 +283,14 @@ main{padding:22px 13px 45px}.statgrid{grid-template-columns:1fr 1fr}}
         <p>No live sources were returned. Prices are not verified.</p>
        {% endif %}
       {% endif %}
-      <p class="small">AI-generated decision support, not a physical diagnosis.
-      Verify prices, compatibility, warranty and repair safety with a qualified technician.</p>
+      <div class="report-divider"></div>
+      <p class="small">AI-generated decision support, not a physical diagnosis. Verify prices, compatibility, warranty and repair safety with a qualified technician.</p>
     {% endif %}
    {% endif %}
   </section>
  </div>
- <footer>ReLoop AI • Repair first when safe and practical • Recycle responsibly</footer>
 </main>
+<footer><span class="footer-mark">ReLoop AI</span> · Repair first when safe and practical · Recover useful components · Recycle responsibly</footer>
 </body>
 </html>
 """
