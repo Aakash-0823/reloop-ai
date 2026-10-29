@@ -235,6 +235,7 @@ button:active{transform:translateY(0)}
 .notice strong{color:#eaf7ff}
 .result{margin-top:22px}
 .report-empty{min-height:230px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px 8px}
+.uploaded-evidence{display:grid;grid-template-columns:minmax(100px,150px) minmax(0,1fr);gap:13px;align-items:center;margin:12px 0 16px;padding:11px;border:1px solid rgba(71,157,255,.3);border-radius:12px;background:linear-gradient(120deg,rgba(11,38,74,.75),rgba(4,14,32,.8))}.uploaded-evidence img{display:block;width:100%;max-height:150px;object-fit:contain;border-radius:8px;background:#030914}.uploaded-evidence strong{display:block;color:#d8f3ff;font-size:12px}.uploaded-evidence p{font-size:11px;margin:5px 0 0;color:#9db9dc}.evidence-badge{display:inline-block;margin-top:7px;padding:4px 7px;border-radius:6px;border:1px solid rgba(105,239,255,.28);color:#75e7ff;font-size:9px;font-weight:800;letter-spacing:.7px}@media(max-width:420px){.uploaded-evidence{grid-template-columns:100px minmax(0,1fr);gap:9px}}
 .scan-icon{width:68px;height:68px;border-radius:19px;display:grid;place-items:center;font-size:29px;color:var(--cyan);border:1px solid rgba(86,184,255,.35);background:radial-gradient(circle at 50% 35%,rgba(51,168,255,.2),rgba(9,24,49,.3));box-shadow:0 0 35px rgba(37,140,255,.1);margin-bottom:17px}
 .report-empty h3{margin:0 0 7px;font-size:16px}
 .report-empty p{font-size:12px;max-width:290px;margin:0}
@@ -363,7 +364,13 @@ footer{max-width:1120px;margin:auto;padding:0 20px 28px;text-align:center;color:
     {% if result.error %}
       <div class="notice"><strong>Analysis needs attention</strong><br>{{ result.error }}</div>
     {% else %}
-      <div class="eyebrow">{% if 'Rule-based' in (result.confidence or '') %}DEMO ENGINE ANALYSIS{% else %}AI-ASSISTED INSPECTION{% endif %}</div>
+      {% if result.uploaded_image %}
+       <div class="uploaded-evidence">
+        <img src="{{ result.uploaded_image }}" alt="Device photo submitted for ReLoop AI inspection">
+        <div><strong>Visual evidence received</strong><p>Your uploaded photo is attached to this report for visual reference.</p><span class="evidence-badge">{% if result.image_ai_verified %}VISION AI PROCESSED{% else %}PHOTO RECEIVED · HUMAN REVIEW{% endif %}</span></div>
+       </div>
+      {% endif %}
+      <div class="eyebrow">{% if 'Rule-based' in (result.confidence or '') or 'Demo analysis' in (result.confidence or '') %}RELOOP AI DEMO ENGINE{% else %}AI-ASSISTED INSPECTION{% endif %}</div>
       <h2>{{ result.device }}</h2>
       <p>{{ result.damage }}</p>
       <div class="statgrid">
@@ -660,7 +667,7 @@ def build_rule_based_fallback(model, symptoms, budget):
     result = {
         "device": device_name,
         "damage": "Assessment scope: this result uses the device details and symptom information provided. Image-based confirmation was not completed for this report.",
-        "confidence": "Rule-based · not image-verified",
+        "confidence": "Demo analysis · photo received",
         "decision": decision,
         "reason": reason,
         "reasons": reasons,
@@ -705,6 +712,8 @@ def home():
     symptoms = ""
     model = ""
     budget = ""
+    image_preview = None
+    image_ai_processed = False
 
     if request.method == "POST":
         symptoms = request.form.get("symptoms", "").strip()
@@ -720,7 +729,13 @@ def home():
             elif photo.mimetype not in ("image/jpeg", "image/png", "image/webp"):
                 result = {"error": "Use a JPG, PNG or WebP image."}
             else:
-                result = build_rule_based_fallback(model, symptoms, budget)
+                raw = photo.read()
+                if len(raw) > 8 * 1024 * 1024:
+                    result = {"error": "Image must be smaller than 8 MB."}
+                else:
+                    encoded = base64.b64encode(raw).decode("utf-8")
+                    image_preview = f"data:{photo.mimetype};base64,{encoded}"
+                    result = build_rule_based_fallback(model, symptoms, budget)
         elif not photo or not photo.filename:
             result = {"error": "Please choose a device image first."}
         elif not symptoms:
@@ -734,6 +749,7 @@ def home():
                     raise ValueError("Image must be smaller than 8 MB.")
                 encoded = base64.b64encode(raw).decode("utf-8")
                 image_url = f"data:{photo.mimetype};base64,{encoded}"
+                image_preview = image_url
 
                 inspection = ask_ai(
                     "You inspect consumer electronics from photos and symptoms. "
@@ -752,9 +768,11 @@ def home():
                     ]
                 )
 
+                image_ai_processed = True
                 questions = inspection.get("questions", [])
                 if questions:
                     result = {
+                        "image_ai_verified": True,
                         "device": inspection.get("device", "Uncertain device"),
                         "damage": inspection.get("damage", "Identity needs clarification."),
                         "confidence": inspection.get("confidence", "Low"),
@@ -807,6 +825,7 @@ def home():
                           "Do not treat absence of price evidence as a price of zero."}]
                     )
                     result = {
+                        "image_ai_verified": True,
                         "device": inspection.get("device", "Uncertain device"),
                         "damage": inspection.get("damage", "Needs technician inspection."),
                         "confidence": inspection.get("confidence", "Uncertain"),
@@ -852,6 +871,11 @@ def home():
                     "This result uses the entered model/symptoms, transparent rules, and stored or category-level price estimates; "
                     "the uploaded image was not confirmed by vision AI. " + result["comparison"]
                 )
+
+    if result and not result.get("error"):
+        if image_preview:
+            result["uploaded_image"] = image_preview
+        result.setdefault("image_ai_verified", image_ai_processed)
 
     return render_template_string(
         PAGE, result=result, symptoms=symptoms, model=model, budget=budget
