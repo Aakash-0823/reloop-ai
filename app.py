@@ -2,14 +2,18 @@ import os
 import json
 import base64
 import re
+import logging
 import requests
 from flask import Flask, request, render_template_string
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("reloop_ai")
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip() or "gemini-3.8-flash"
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 
 PAGE = r"""
@@ -345,24 +349,41 @@ def ask_ai(instructions, content):
         "https://generativelanguage.googleapis.com/v1beta/models/"
         f"{GEMINI_MODEL}:generateContent"
     )
-    response = requests.post(
-        url,
-        headers={
-            "x-goog-api-key": GEMINI_API_KEY,
-            "Content-Type": "application/json"
-        },
-        json={
-            "systemInstruction": {"parts": [{"text": instructions}]},
-            "contents": [{"role": "user", "parts": gemini_parts}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "temperature": 0.2,
-                "maxOutputTokens": 1400
-            }
-        },
-        timeout=90
-    )
-    response.raise_for_status()
+    try:
+        response = requests.post(
+            url,
+            headers={
+                "x-goog-api-key": GEMINI_API_KEY,
+                "Content-Type": "application/json"
+            },
+            json={
+                "systemInstruction": {"parts": [{"text": instructions}]},
+                "contents": [{"role": "user", "parts": gemini_parts}],
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                    "temperature": 0.2,
+                    "maxOutputTokens": 1400
+                }
+            },
+            timeout=(10, 65)
+        )
+    except requests.Timeout as exc:
+        logger.warning("Gemini request timed out (model=%s): %s", GEMINI_MODEL, type(exc).__name__)
+        raise RuntimeError("Gemini took too long to respond. Please try a smaller JPG/PNG image or try again shortly.") from exc
+    except requests.RequestException as exc:
+        logger.warning("Gemini network request failed (model=%s): %s", GEMINI_MODEL, type(exc).__name__)
+        raise RuntimeError("Could not connect to Gemini. Check the Render service/network and try again.") from exc
+
+    if not response.ok:
+        try:
+            api_error = response.json().get("error", {})
+            detail = api_error.get("message", "")
+        except (ValueError, AttributeError):
+            detail = ""
+        logger.warning("Gemini returned HTTP %s (model=%s): %s", response.status_code, GEMINI_MODEL, detail[:300])
+        raise requests.HTTPError(
+            f"Gemini HTTP {response.status_code}: {detail[:300]}", response=response
+        )
     data = response.json()
     candidates = data.get("candidates", [])
     if not candidates:
@@ -382,20 +403,27 @@ def search_web(query):
     """Search current public web pages. Empty list means no live evidence."""
     if not TAVILY_API_KEY:
         return []
-    response = requests.post(
-        "https://api.tavily.com/search",
-        headers={"Content-Type": "application/json"},
-        json={
-            "api_key": TAVILY_API_KEY,
-            "query": query,
-            "search_depth": "basic",
-            "max_results": 5,
-            "topic": "general"
-        },
-        timeout=35
-    )
-    response.raise_for_status()
-    return response.json().get("results", [])
+    try:
+        response = requests.post(
+            "https://api.tavily.com/search",
+            headers={"Content-Type": "application/json"},
+            json={
+                "api_key": TAVILY_API_KEY,
+                "query": query,
+                "search_depth": "basic",
+                "max_results": 5,
+                "topic": "general"
+            },
+            timeout=(8, 20)
+        )
+        if not response.ok:
+            logger.warning("Tavily search returned HTTP %s; continuing without live web sources.", response.status_code)
+            return []
+        return response.json().get("results", [])
+    except (requests.RequestException, ValueError) as exc:
+        # Live pricing search is supplementary; analysis can still continue without it.
+        logger.warning("Tavily search unavailable (%s); continuing without live web sources.", type(exc).__name__)
+        return []
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -529,8 +557,11 @@ def home():
                 if detail:
                     message += " Details: " + detail[:240]
                 result = {"error": message}
-            except requests.RequestException:
-                result = {"error": "A network/API request failed. Check the API keys and try again."}
+            except requests.RequestException as exc:
+                logger.warning("External API request failed: %s", type(exc).__name__)
+                result = {"error": "The AI service request failed. Check the model and API access in Render, then try again."}
+            except RuntimeError as exc:
+                result = {"error": str(exc)}
             except (ValueError, KeyError, json.JSONDecodeError) as exc:
                 result = {"error": f"Could not complete the analysis: {str(exc)[:220]}"}
             except Exception:
@@ -548,4 +579,3 @@ def too_large(_error):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=False)
- 
