@@ -257,12 +257,20 @@ footer{max-width:1120px;margin:auto;padding:0 20px 28px;text-align:center;color:
 .footer-mark{color:#9fddff}
 .footer-rule{height:1px;max-width:460px;margin:0 auto 17px;background:linear-gradient(90deg,transparent,rgba(53,167,255,.65),rgba(105,239,255,.55),transparent)}
 .footer-copy{letter-spacing:.15px}
+.prototype-note{max-width:850px;margin:0 auto 22px;padding:12px 16px;border:1px solid rgba(75,158,255,.28);border-radius:12px;background:linear-gradient(100deg,rgba(14,42,78,.72),rgba(8,22,47,.72));color:#c6e8ff;font-size:12px;line-height:1.7}
+.prototype-note strong{color:#69efff}
+.team-credit{max-width:850px;margin:18px auto 0;padding:17px 18px;border:1px solid rgba(53,167,255,.25);border-radius:14px;background:rgba(7,19,42,.72);box-shadow:0 0 28px rgba(25,120,255,.07)}
+.team-title{color:#69efff;font-weight:900;letter-spacing:2px;font-size:11px;margin-bottom:11px}
+.team-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;text-align:left}
+.team-member{color:#78c8ff;font-size:12px;line-height:1.6}
+.team-member strong{color:#b8e8ff;font-weight:800}
+.team-member span{color:#6fa9e8;font-size:11px}
 .powered-by{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:9px;color:#718db4;font-size:9px;letter-spacing:2.2px}
 .powered-by:before,.powered-by:after{content:"";width:24px;height:1px;background:rgba(105,239,255,.45)}
 .powered-by strong{font-size:11px;letter-spacing:2.8px;color:#69efff;text-shadow:0 0 14px rgba(53,167,255,.45)}
 .card:after{content:"";position:absolute;right:13px;bottom:13px;width:24px;height:24px;border-right:1px solid rgba(105,239,255,.2);border-bottom:1px solid rgba(105,239,255,.2);border-radius:0 0 7px 0;pointer-events:none}
 .hero:after{content:"R / 01";position:absolute;right:4px;bottom:27px;color:rgba(111,178,255,.38);font-size:10px;font-weight:800;letter-spacing:2px}
-@media(max-width:760px){.hero:after{display:none}.footer-copy{line-height:1.9}}
+@media(max-width:760px){.hero:after{display:none}.footer-copy{line-height:1.9}.team-grid{grid-template-columns:1fr}}
 @media(max-width:760px){
   header{padding:13px 16px}.brand-sub{letter-spacing:1px}.pill{font-size:8px;padding:6px 8px;letter-spacing:.7px}
   main{padding:22px 13px 42px}.hero{padding:25px 0 24px}.hero h1{letter-spacing:-1.8px}
@@ -355,7 +363,7 @@ footer{max-width:1120px;margin:auto;padding:0 20px 28px;text-align:center;color:
     {% if result.error %}
       <div class="notice"><strong>Analysis needs attention</strong><br>{{ result.error }}</div>
     {% else %}
-      <div class="eyebrow">AI INSPECTION</div>
+      <div class="eyebrow">{% if 'Rule-based' in (result.confidence or '') %}DEMO ENGINE ANALYSIS{% else %}AI-ASSISTED INSPECTION{% endif %}</div>
       <h2>{{ result.device }}</h2>
       <p>{{ result.damage }}</p>
       <div class="statgrid">
@@ -383,7 +391,12 @@ footer{max-width:1120px;margin:auto;padding:0 20px 28px;text-align:center;color:
          — {{ s.summary }}</li>
         {% endfor %}</ul>
        {% else %}
-        <p>No live sources were returned. Prices are not verified.</p>
+        <p><strong>Offline reference estimate:</strong> the repair and replacement ranges above are generated from ReLoop AI's built-in planning rules. If the model matches the stored price database, model-specific reference figures are used; otherwise, a broad average range for that device category is shown.</p>
+        <ul>
+         <li><strong>Cost method:</strong> compare estimated repair cost with indicative replacement cost and the device's likely remaining useful life.</li>
+         <li><strong>Technical decision factors:</strong> reported symptoms, safety concerns, repair feasibility, parts availability, and possible reuse or material recovery.</li>
+         <li><strong>Price status:</strong> offline reference estimate, not a live quote. Treat these figures as planning estimates, not a verified shop quote.</li>
+        </ul>
        {% endif %}
       {% endif %}
       <div class="report-divider"></div>
@@ -393,7 +406,22 @@ footer{max-width:1120px;margin:auto;padding:0 20px 28px;text-align:center;color:
   </section>
  </div>
 </main>
-<footer><div class="footer-rule"></div><div class="footer-copy"><span class="footer-mark">ReLoop AI</span> · Repair first when safe and practical · Recover useful components · Recycle responsibly</div><div class="powered-by">POWERED BY <strong>THE CODEX</strong></div></footer>
+<footer>
+ <div class="prototype-note"><strong>DEMO PROTOTYPE ONLY</strong> — This prototype demonstrates the intended ReLoop AI workflow. The full, production-ready ReLoop AI will be developed after qualifying for Round 2.</div>
+ <div class="footer-rule"></div>
+ <div class="footer-copy"><span class="footer-mark">ReLoop AI</span> · Repair first when safe and practical · Recover useful components · Recycle responsibly</div>
+ <div class="team-credit">
+  <div class="team-title">🔵 TEAM RELOOP AI</div>
+  <div class="team-grid">
+   <div class="team-member"><strong>Abishajesudhas</strong> <span>· Team Leader · 146110026</span></div>
+   <div class="team-member"><strong>Aakashwar.s</strong> <span>· 146110004</span></div>
+   <div class="team-member"><strong>Abenav</strong> <span>· 146110015</span></div>
+   <div class="team-member"><strong>Ankitha</strong> <span>· 146110059</span></div>
+   <div class="team-member"><strong>Anisha</strong> <span>· 146110058</span></div>
+  </div>
+ </div>
+ <div class="powered-by">POWERED BY <strong>THE CODEX</strong></div>
+</footer>
 </body>
 </html>
 """
@@ -624,21 +652,14 @@ def build_rule_based_fallback(model, symptoms, budget):
             "Compare repair cost and expected remaining useful life before choosing a pathway."
         ]
 
-    query = f"{device_name} repair parts price India INR {symptoms or ''}".strip()
-    pages = search_web(query) if TAVILY_API_KEY else []
+    # Offline fallback deliberately does not depend on live web search.
+    # Model-specific stored prices are linked by add_cost_estimates(); unmatched
+    # devices receive clearly labelled India planning ranges.
     sources = []
-    for page in pages:
-        url = page.get("url", "")
-        if url.startswith(("https://", "http://")):
-            sources.append({
-                "title": (page.get("title") or "Source page")[:180],
-                "url": url,
-                "summary": (page.get("content") or "Open the source to verify details.")[:350]
-            })
 
     result = {
         "device": device_name,
-        "damage": "AI image analysis unavailable. This result is based only on the symptom description entered by the user.",
+        "damage": "Assessment scope: this result uses the device details and symptom information provided. Image-based confirmation was not completed for this report.",
         "confidence": "Rule-based · not image-verified",
         "decision": decision,
         "reason": reason,
@@ -801,39 +822,36 @@ def home():
                     result = add_cost_estimates(result, model or inspection.get("device", ""), symptoms)
             except requests.HTTPError as exc:
                 status = exc.response.status_code if exc.response is not None else "unknown"
-                detail = ""
-                if exc.response is not None:
-                    try:
-                        api_error = exc.response.json().get("error", {})
-                        detail = api_error.get("message", "")
-                    except (ValueError, AttributeError):
-                        pass
-                if status == 400:
-                    message = "Gemini rejected the request. Check the model name and image format."
-                elif status == 401 or status == 403:
-                    message = "Gemini API key or API access was rejected. Check GEMINI_API_KEY in Render."
-                elif status == 429:
-                    message = "Gemini free-tier quota or rate limit reached. Check the Google AI Studio usage limits and try later."
-                else:
-                    message = f"Gemini API returned HTTP {status}. Check model access and usage limits."
-                if detail:
-                    message += " Details: " + detail[:240]
-                if status == 503 or status == 429 or (isinstance(status, int) and status >= 500):
-                    result = build_rule_based_fallback(model, symptoms, budget)
-                    result["comparison"] = "Gemini is temporarily unavailable, so this is a rule-based fallback. " + result["comparison"]
-                else:
-                    result = {"error": message}
+                logger.warning("AI provider request failed (HTTP %s); using offline demo engine.", status)
+                result = build_rule_based_fallback(model, symptoms, budget)
+                result["comparison"] = (
+                    "OFFLINE DEMO MODE: the cloud AI service did not complete this request. "
+                    "This result uses the entered model/symptoms, transparent rules, and stored or category-level price estimates; "
+                    "the uploaded image was not confirmed by vision AI. " + result["comparison"]
+                )
             except requests.RequestException as exc:
                 logger.warning("External API request failed: %s", type(exc).__name__)
                 result = build_rule_based_fallback(model, symptoms, budget)
-                result["comparison"] = "An external service failed, so this is a rule-based fallback. " + result["comparison"]
+                result["comparison"] = "ReLoop AI demo decision engine: this report uses the submitted details, symptom rules, and stored reference-price data. Image-based AI confirmation was not completed for this result. " + result["comparison"]
             except RuntimeError as exc:
                 result = build_rule_based_fallback(model, symptoms, budget)
-                result["comparison"] = "AI analysis could not finish, so this is a rule-based fallback. " + result["comparison"]
+                result["comparison"] = "ReLoop AI demo decision engine: this report uses the submitted details, symptom rules, and stored reference-price data. Image-based AI confirmation was not completed for this result. " + result["comparison"]
             except (ValueError, KeyError, json.JSONDecodeError) as exc:
-                result = {"error": f"Could not complete the analysis: {str(exc)[:220]}"}
-            except Exception:
-                result = {"error": "Unexpected error. Check the server logs for details."}
+                logger.warning("AI analysis/parsing did not complete (%s); using offline demo engine.", type(exc).__name__)
+                result = build_rule_based_fallback(model, symptoms, budget)
+                result["comparison"] = (
+                    "OFFLINE DEMO MODE: the cloud AI service did not complete this request. "
+                    "This result uses the entered model/symptoms, transparent rules, and stored or category-level price estimates; "
+                    "the uploaded image was not confirmed by vision AI. " + result["comparison"]
+                )
+            except Exception as exc:
+                logger.exception("Unexpected analysis error; using offline demo engine.")
+                result = build_rule_based_fallback(model, symptoms, budget)
+                result["comparison"] = (
+                    "OFFLINE DEMO MODE: the cloud AI service did not complete this request. "
+                    "This result uses the entered model/symptoms, transparent rules, and stored or category-level price estimates; "
+                    "the uploaded image was not confirmed by vision AI. " + result["comparison"]
+                )
 
     return render_template_string(
         PAGE, result=result, symptoms=symptoms, model=model, budget=budget
@@ -847,4 +865,3 @@ def too_large(_error):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=False)
- 
